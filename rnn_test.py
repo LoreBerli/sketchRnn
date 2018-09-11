@@ -10,7 +10,7 @@ import time
 EPOCHS=8
 trunc_back=10
 BATCH=64
-leng=72
+leng=128
 dataset="dataset/shuffled_bikecar"
 
 
@@ -108,7 +108,7 @@ def better_model(x,z=None):
         print("middle",middle)
         print("STATE_FW",state_ll)
         #res=tf.expand_dims(middle,axis=-1)
-        res=tf.zeros([BATCH,72,3])
+        res=tf.zeros([BATCH,128,3])
         print("Second INPUT",res)
 
         dec_outs,dec_state= tf.nn.dynamic_rnn(
@@ -290,9 +290,11 @@ def test_better_model():
     pred,latent = better_model(x_in)
     _,z=better_model(x_in,z_in)
 
-    loss=tf.losses.mean_squared_error(y_in,pred)
+    loss=tf.losses.mean_squared_error(y_in[:,:,0:2],pred[:,:,0:2])
+    cro = tf.losses.sigmoid_cross_entropy(y_in[:,:,2],pred[:,:,2])
+    final = 50.0 * loss+cro
     optimizer = tf.train.RMSPropOptimizer(learning_rate=0.0025)
-    minimize = optimizer.minimize(loss)
+    minimize = optimizer.minimize(final)
 
     tf.summary.scalar("mse", loss)
     sess = tf.Session()
@@ -311,11 +313,11 @@ def test_better_model():
             #print("idx: "+str(idx))
             sess.run(minimize,{x_in:x,y_in: y})
             if(idx%5==0):
-                lo,summary=sess.run([loss,merge],{x_in: x, y_in: y})
+                lo,summary=sess.run([final,merge],{x_in: x, y_in: y})
                 print("::",lo)
                 train_writer.add_summary(summary,idx)
 
-            if(idx%5==0):
+            if(idx%20==0):
                 print("Saving images...")
                 #diff = sess.run(loss, {x_in: x, y_in: y})
                 tt = sess.run(pred, {x_in: x, y_in: y})

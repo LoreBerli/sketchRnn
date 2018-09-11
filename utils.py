@@ -71,7 +71,7 @@ def get_slightly_less_simplified_data(dt,MAX):
                 points.append(points[-1])
             points=np.asarray(points)
 
-            yield points[0:72,:]
+            yield points[0:128,:]
 
 def get_info(dt):
     gen = json_gen(dt)
