@@ -22,7 +22,7 @@ def get_data(MAX):
 
 def get_simplified_data(dt,MAX):
 
-    gen = json_gen(dt)
+    gen = create_shuffled_mixed_dataset("",200)
     for v in gen:
 
         o=json.loads(v)
@@ -36,6 +36,42 @@ def get_simplified_data(dt,MAX):
                 points.append(points[-1])
             yield (np.array(points[0:MAX])/128.0)-1.0
 
+def create_shuffled_mixed_dataset(categories,per_cat):
+    dts=[d for d in os.listdir("dataset")]
+    dts_gens=[json_gen("dataset/"+d) for d in dts]
+    for i in range(0,per_cat):
+        for g in dts_gens:
+            yield next(g)
+
+def get_slightly_less_simplified_data(dt,MAX):
+    """
+    Terribile ma funziona
+    :param dt: json quickDraw dataset
+    :param MAX: MAX # of points
+    :return: normalized data , [x,y,pen_down]
+    """
+    gen = create_shuffled_mixed_dataset("",10000)
+    for v in gen:
+
+        o=json.loads(v)
+
+        if(o["recognized"]==True):
+            points=[]
+            strokes = o["drawing"]
+            for s in strokes:
+                strok = list(zip(s[0], s[1]))
+                pen_stroks=[]
+                for pts in strok:
+                    norm_pts=[(pts[0]/128.0)-1.0,(pts[1]/128.0)-1.0,1]
+                    pen_stroks.append(np.array(norm_pts))
+
+                pen_stroks[-1][2]=-1
+                points.extend(np.array(pen_stroks))
+            while(len(points)<MAX):
+                points.append(points[-1])
+            points=np.asarray(points)
+
+            yield points[0:72,:]
 
 def get_info(dt):
     gen = json_gen(dt)
@@ -71,4 +107,8 @@ def get_info(dt):
     print(avg,std)
 
 
+#print("Hi")
+
+#get_slightly_less_simplified_data("dataset",10)
+#get_slightly_less_simplified_data("dataset/car/car",10)
 #get_info()
