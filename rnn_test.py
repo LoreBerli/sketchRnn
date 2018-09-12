@@ -10,7 +10,7 @@ import time
 EPOCHS=8
 trunc_back=10
 BATCH=64
-leng=128
+leng=200
 dataset="dataset/shuffled_bikecar"
 
 
@@ -101,7 +101,7 @@ def better_model(x,z=None):
             state_ll = tot
         else:
             middle=z
-            state_ll=tfn.LSTMCell.zero_state(cell_dec,BATCH,dtype=tf.float32)
+            state_ll=tfn.MultiRNNCell.zero_state(cell_dec,BATCH,dtype=tf.float32)
         #middle=tf.transpose(middle,[1,2,0])
         ####
         #state_ll=state_fw
@@ -312,12 +312,12 @@ def test_better_model():
         for x,y in gene:
             #print("idx: "+str(idx))
             sess.run(minimize,{x_in:x,y_in: y})
-            if(idx%5==0):
+            if(idx%50==0):
                 lo,summary=sess.run([final,merge],{x_in: x, y_in: y})
                 print("::",lo)
                 train_writer.add_summary(summary,idx)
 
-            if(idx%20==0):
+            if(idx%200==0):
                 print("Saving images...")
                 #diff = sess.run(loss, {x_in: x, y_in: y})
                 tt = sess.run(pred, {x_in: x, y_in: y})
