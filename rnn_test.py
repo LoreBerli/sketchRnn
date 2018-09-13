@@ -9,13 +9,9 @@ import time
 
 EPOCHS=16
 trunc_back=10
-<<<<<<< HEAD
-BATCH=512
-leng=80
-=======
-BATCH=64
-leng=200
->>>>>>> 132e4eec0e182d8b583e1d322b237ce4a5040da4
+BATCH=32
+leng=64
+
 dataset="dataset/shuffled_bikecar"
 os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
@@ -331,7 +327,6 @@ def test_better_model():
         for x,y in gene:
             #print("idx: "+str(idx))
             sess.run(minimize,{x_in:x,y_in: y})
-<<<<<<< HEAD
             if(idx%10==0):
                 cros,lo,tots,summary=sess.run([cro,loss,final,merge],{x_in: x, y_in: y})
 
@@ -341,15 +336,8 @@ def test_better_model():
                 print("total",tots)
                 train_writer.add_summary(summary,idx)
 
-            if(idx%50==0):
-=======
-            if(idx%50==0):
-                lo,summary=sess.run([final,merge],{x_in: x, y_in: y})
-                print("::",lo)
-                train_writer.add_summary(summary,idx)
 
             if(idx%200==0):
->>>>>>> 132e4eec0e182d8b583e1d322b237ce4a5040da4
                 print("Saving images...")
                 #diff = sess.run(loss, {x_in: x, y_in: y})
                 cords,states = sess.run([pred_pos,pred_state], {x_in: x, y_in: y})
