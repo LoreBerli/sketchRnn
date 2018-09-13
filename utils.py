@@ -40,10 +40,9 @@ def create_shuffled_mixed_dataset(categories,per_cat):
     dts=[d for d in os.listdir("dataset")]
     dts_gens=[json_gen("dataset/"+d) for d in dts]
     while(True):
-        print("in loop")
         for i in range(0,per_cat):
-		    for g in dts_gens:
-		        yield next(g)
+            for g in dts_gens:
+                yield next(g)
 
 def get_slightly_less_simplified_data(dt,MAX):
     """
