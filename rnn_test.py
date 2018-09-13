@@ -7,12 +7,12 @@ import sketcher
 import os
 import time
 
-EPOCHS=8
+EPOCHS=16
 trunc_back=10
-BATCH=64
-leng=128
+BATCH=512
+leng=80
 dataset="dataset/shuffled_bikecar"
-
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
 def get_drawings():
         gg=utils.get_simplified_data(leng)
@@ -101,7 +101,7 @@ def better_model(x,z=None):
             state_ll = tot
         else:
             middle=z
-            state_ll=tfn.LSTMCell.zero_state(cell_dec,BATCH,dtype=tf.float32)
+            state_ll=tfn.MultiRNNCell.zero_state(cell_dec,BATCH,dtype=tf.float32)
         #middle=tf.transpose(middle,[1,2,0])
         ####
         #state_ll=state_fw
@@ -120,12 +120,25 @@ def better_model(x,z=None):
         scope='RNN')
 
         ###
-        flat_outs=tf.layers.flatten(dec_outs)
+        acti=None
+        flat_outs=tf.layers.flatten(dec_outs[:,:,0:2])
+        states=tf.layers.flatten(dec_outs[:,:,2])
+        
         print(flat_outs)
-        last = tf.layers.dense(flat_outs,leng*3,activation=tf.tanh)
-        last=tf.reshape(last,[BATCH,leng,3])
-        print(last)
-        return last,middle
+        last = tf.layers.dense(flat_outs,leng*2,activation=acti)
+        last_state=tf.layers.dense(states,leng,activation=acti)
+        #last=tf.expand_dims(last,-1)
+        #last_state=tf.expand_dims(last_state,-1)
+
+        last=tf.reshape(last,[BATCH,leng,2])
+        #last_state=tf.reshape(last_state,[BATCH,leng,1])
+        print("LAST",last)
+        print("LAST_STATE",last_state)
+        #total=tf.concat([last,last_state],axis=-1)
+        #total=tf.reshape(total,[BATCH,leng,3])
+        #last=tf.reshape(last,[BATCH,leng,3])
+
+        return last,last_state,middle
 
 
 
@@ -287,13 +300,14 @@ def test_better_model():
     y_in = tf.placeholder(tf.float32, shape=[BATCH, leng , 3])
     print(y_in)
     z_in=tf.placeholder(tf.float32,shape=[BATCH,leng*3])
-    pred,latent = better_model(x_in)
-    _,z=better_model(x_in,z_in)
+    pred_pos,pred_state,latent = better_model(x_in)
+    
+    _,_,z=better_model(x_in,z_in)
 
-    loss=tf.losses.mean_squared_error(y_in[:,:,0:2],pred[:,:,0:2])
-    cro = tf.losses.sigmoid_cross_entropy(y_in[:,:,2],pred[:,:,2])
-    final = 50.0 * loss+cro
-    optimizer = tf.train.RMSPropOptimizer(learning_rate=0.0025)
+    loss=tf.losses.mean_squared_error(y_in[:,:,0:2],pred_pos)
+    cro = tf.losses.mean_squared_error(y_in[:,:,2],pred_state)
+    final = 10.0*loss+cro
+    optimizer = tf.train.AdamOptimizer(learning_rate=0.002)
     minimize = optimizer.minimize(final)
 
     tf.summary.scalar("mse", loss)
@@ -312,15 +326,25 @@ def test_better_model():
         for x,y in gene:
             #print("idx: "+str(idx))
             sess.run(minimize,{x_in:x,y_in: y})
-            if(idx%5==0):
-                lo,summary=sess.run([final,merge],{x_in: x, y_in: y})
-                print("::",lo)
+            if(idx%10==0):
+                cros,lo,tots,summary=sess.run([cro,loss,final,merge],{x_in: x, y_in: y})
+
+                print("##################")
+                print("states",cros)
+                print("positions",lo)
+                print("total",tots)
                 train_writer.add_summary(summary,idx)
 
-            if(idx%20==0):
+            if(idx%50==0):
                 print("Saving images...")
                 #diff = sess.run(loss, {x_in: x, y_in: y})
-                tt = sess.run(pred, {x_in: x, y_in: y})
+                cords,states = sess.run([pred_pos,pred_state], {x_in: x, y_in: y})
+                total=np.concatenate([cords,np.reshape(states,[BATCH,leng,1])],-1)
+                tt=total
+                print(y[0])
+                print(cords[0])
+                print(states[0])
+                print("##################")
                 np.random.seed(i)
                 img = np.random.randint(0,BATCH)
                 #sketcher.save_tested(list((0.5 + tt[img])*256),"denseR",str(i)+str(idx))
@@ -328,7 +352,7 @@ def test_better_model():
                 #sketcher.save_batch(list((1 + y[0:16]) * 128), dr + "/imgs", str(i) + str(idx)+"gt")
                 tot=np.array(tot)
                 tot=np.expand_dims(tot,0)
-                tf.summary.image(str(idx%500),np.array(tot))
+                tf.summary.image(str(i)+"_"+str(idx%500),np.array(tot))
 
             # if(idx%1000==0):
             #     inter=sess.run(latent, {x_in:x})

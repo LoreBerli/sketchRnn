@@ -39,9 +39,11 @@ def get_simplified_data(dt,MAX):
 def create_shuffled_mixed_dataset(categories,per_cat):
     dts=[d for d in os.listdir("dataset")]
     dts_gens=[json_gen("dataset/"+d) for d in dts]
-    for i in range(0,per_cat):
-        for g in dts_gens:
-            yield next(g)
+    while(True):
+        print("in loop")
+        for i in range(0,per_cat):
+		    for g in dts_gens:
+		        yield next(g)
 
 def get_slightly_less_simplified_data(dt,MAX):
     """
@@ -50,7 +52,7 @@ def get_slightly_less_simplified_data(dt,MAX):
     :param MAX: MAX # of points
     :return: normalized data , [x,y,pen_down]
     """
-    gen = create_shuffled_mixed_dataset("",10000)
+    gen = create_shuffled_mixed_dataset("",50000)
     for v in gen:
 
         o=json.loads(v)
@@ -71,7 +73,7 @@ def get_slightly_less_simplified_data(dt,MAX):
                 points.append(points[-1])
             points=np.asarray(points)
 
-            yield points[0:128,:]
+            yield points[0:MAX,:]
 
 def get_info(dt):
     gen = json_gen(dt)
