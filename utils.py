@@ -66,10 +66,12 @@ def get_slightly_less_simplified_data(dt,MAX):
                     norm_pts=[(pts[0]/128.0)-1.0,(pts[1]/128.0)-1.0,1]
                     pen_stroks.append(np.array(norm_pts))
 
-                pen_stroks[-1][2]=-1
+                pen_stroks[-1][2]=0
                 points.extend(np.array(pen_stroks))
             while(len(points)<MAX):
-                points.append(points[-1])
+                p=points[-1]
+                p[2]=-1
+                points.append(p)
             points=np.asarray(points)
 
             yield points[0:MAX,:]

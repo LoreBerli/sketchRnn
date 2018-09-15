@@ -9,11 +9,19 @@ import time
 
 EPOCHS=16
 trunc_back=10
-BATCH=32
-leng=64
+BATCH=64
+leng=80
 
 dataset="dataset/shuffled_bikecar"
 os.environ["CUDA_VISIBLE_DEVICES"]="1"
+
+#TODO leng variabile
+#TODO TOKEN fine sequenza <EOS> ===> -1 ?
+#TODO MASK LOSS per punti dopo <EOS>
+
+
+
+
 
 def get_drawings():
         gg=utils.get_simplified_data(leng)
@@ -87,7 +95,6 @@ def better_model(x,z=None):
     with tf.variable_scope("bet_mod",reuse=tf.AUTO_REUSE):
         if(z==None):
             x=tf.tile(x,(1,leng,1))
-            print("INPUT:"+str(x))
             cell_fw=tfn.MultiRNNCell([tfn.LSTMCell(enc_size,name="fw"+str(i)) for i in range(0,3)])
             cell_bw=tfn.MultiRNNCell([tfn.LSTMCell(enc_size,name="bw"+str(i)) for i in range(0,3)])
             #outputs,state = tf.nn.bidirectional_dynamic_rnn(cell_fw,cell_bw,inputs=x,dtype=tf.float32,sequence_length=llz,time_major=False,scope="encoder")
@@ -126,8 +133,8 @@ def better_model(x,z=None):
         states=tf.layers.flatten(dec_outs[:,:,2])
         
         print(flat_outs)
-        last = tf.layers.dense(flat_outs,leng*2,activation=acti)
-        last_state=tf.layers.dense(states,leng,activation=acti)
+        last = tf.layers.dense(flat_outs,leng*2,activation=tf.tanh)
+        last_state=tf.layers.dense(states,leng,activation=tf.tanh)
         #last=tf.expand_dims(last,-1)
         #last_state=tf.expand_dims(last_state,-1)
 
@@ -308,7 +315,7 @@ def test_better_model():
     loss=tf.losses.mean_squared_error(y_in[:,:,0:2],pred_pos)
     cro = tf.losses.mean_squared_error(y_in[:,:,2],pred_state)
     final = 10.0*loss+cro
-    optimizer = tf.train.AdamOptimizer(learning_rate=0.002)
+    optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
     minimize = optimizer.minimize(final)
 
     tf.summary.scalar("mse", loss)
@@ -330,23 +337,23 @@ def test_better_model():
             if(idx%10==0):
                 cros,lo,tots,summary=sess.run([cro,loss,final,merge],{x_in: x, y_in: y})
 
-                print("##################")
-                print("states",cros)
-                print("positions",lo)
+                #print("##################")
+                #print("states",cros)
+                #print("positions",lo)
                 print("total",tots)
                 train_writer.add_summary(summary,idx)
 
 
-            if(idx%200==0):
+            if(idx%100==0):
                 print("Saving images...")
                 #diff = sess.run(loss, {x_in: x, y_in: y})
                 cords,states = sess.run([pred_pos,pred_state], {x_in: x, y_in: y})
                 total=np.concatenate([cords,np.reshape(states,[BATCH,leng,1])],-1)
                 tt=total
-                print(y[0])
-                print(cords[0])
-                print(states[0])
-                print("##################")
+                # print(y[0])
+                # print(cords[0])
+                # print(states[0])
+                # print("##################")
                 np.random.seed(i)
                 img = np.random.randint(0,BATCH)
                 #sketcher.save_tested(list((0.5 + tt[img])*256),"denseR",str(i)+str(idx))
