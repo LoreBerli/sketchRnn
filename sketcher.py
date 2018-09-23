@@ -74,7 +74,7 @@ def draw_with_z_axis(pts):
 def draw_both_with_z_axis(pts,gt):
     im_out = Image.new("RGB", (256, 256), (255, 255, 255))
     im_dra = ImageDraw.ImageDraw(im_out)
-
+    
     points = [ tuple(couple) for couple in pts]
     gt_points=[tuple(couple) for couple in gt]
     for p in range(0,len(points)-1):

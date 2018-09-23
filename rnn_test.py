@@ -242,7 +242,10 @@ def test_dense():
     _,z=simple_model(x_in,z_in)
     loss=tf.losses.mean_squared_error(y_in,pred)
     optimizer = tf.train.AdamOptimizer(learning_rate=0.0015)
-    minimize = optimizer.minimize(loss)
+    gvs = optimizer.compute_gradients(loss)
+    capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
+    minimize = optimizer.apply_gradients(capped_gvs)
+
 
     tf.summary.scalar("mse", loss)
     sess = tf.Session()

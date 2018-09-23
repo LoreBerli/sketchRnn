@@ -69,9 +69,8 @@ def get_slightly_less_simplified_data(dt,MAX):
                 pen_stroks[-1][2]=0
                 points.extend(np.array(pen_stroks))
             while(len(points)<MAX):
-                p=points[-1]
-                p[2]=-1
-                points.append(p)
+                last_p_token=[0,0,-1]
+                points.append(last_p_token)
             points=np.asarray(points)
 
             yield points[0:MAX,:]
