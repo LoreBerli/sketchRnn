@@ -79,10 +79,10 @@ def draw_both_with_z_axis(pts,gt):
     gt_points=[tuple(couple) for couple in gt]
     for p in range(0,len(points)-1):
 
-        if(points[p][2]>200):
+        if(points[p][2]>128):
             im_dra.line((points[p][0:2],points[p+1][0:2]),fill=(0, 0, 0))
     for p in range(0,len(gt_points)-1):
-        if(gt_points[p][2]>200):
+        if(gt_points[p][2]>128):
             im_dra.line((gt_points[p][0:2],gt_points[p+1][0:2]),fill=(255, 128, 128))
 
     return im_out

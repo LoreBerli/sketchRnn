@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 import tensorflow.contrib.rnn as tfn
 import tensorflow.contrib as tfc
+import tensorflow.contrib.seq2seq as s2s
 import utils
 import sketcher
 import os
@@ -87,16 +88,18 @@ def rnn_model_dense(x):
 
 
 def better_model(x,z=None):
-    enc_size=128
+    enc_size=64
     dec_size=enc_size
+    layers=2
     llz = tf.constant(value=BATCH, dtype=tf.int32, shape=[BATCH])
-    cell_dec = tfn.MultiRNNCell([tfn.LSTMCell(dec_size, name="dec") for i in range(0,3)])
+    cell_dec = tfn.MultiRNNCell([tfn.GRUCell(dec_size, name="dec") for i in range(0,layers)])
     #state_ll=tf.placeholder(dtype=tf.float32,shape=[BATCH,enc_size])
     with tf.variable_scope("bet_mod",reuse=tf.AUTO_REUSE):
         if(z==None):
-            x=tf.tile(x,(1,leng,1))
-            cell_fw=tfn.MultiRNNCell([tfn.LSTMCell(enc_size,name="fw"+str(i)) for i in range(0,3)])
-            cell_bw=tfn.MultiRNNCell([tfn.LSTMCell(enc_size,name="bw"+str(i)) for i in range(0,3)])
+            x=tf.tile(x,(1,enc_size,1))
+            cell_fw=tfn.MultiRNNCell([tfn.GRUCell(enc_size,name="fw"+str(i)) for i in range(0,layers)])
+
+            cell_bw=tfn.MultiRNNCell([tfn.GRUCell(enc_size,name="bw"+str(i)) for i in range(0,layers)])
             #outputs,state = tf.nn.bidirectional_dynamic_rnn(cell_fw,cell_bw,inputs=x,dtype=tf.float32,sequence_length=llz,time_major=False,scope="encoder")
             outputs,state = tf.nn.dynamic_rnn(cell_fw,inputs=x,dtype=tf.float32,sequence_length=llz,time_major=False,scope="encoder")
 
@@ -116,7 +119,7 @@ def better_model(x,z=None):
         print("middle",middle)
         print("STATE_FW",state_ll)
         #res=tf.expand_dims(middle,axis=-1)
-        res=tf.zeros([BATCH,128,3])
+        res=tf.zeros([BATCH,leng,3])
         print("Second INPUT",res)
 
         dec_outs,dec_state= tf.nn.dynamic_rnn(
@@ -133,8 +136,8 @@ def better_model(x,z=None):
         states=tf.layers.flatten(dec_outs[:,:,2])
         
         print(flat_outs)
-        last = tf.layers.dense(flat_outs,leng*2,activation=tf.tanh)
-        last_state=tf.layers.dense(states,leng,activation=tf.tanh)
+        last = flat_outs#tf.layers.dense(flat_outs,leng*2,activation=tf.tanh)
+        last_state=states#tf.layers.dense(states,leng,activation=None)
         #last=tf.expand_dims(last,-1)
         #last_state=tf.expand_dims(last_state,-1)
 
@@ -150,6 +153,9 @@ def better_model(x,z=None):
 
 
 
+def way_simpler_model(x,z=None):
+
+    pass
 
 
 
@@ -169,7 +175,6 @@ def simple_model(x,z=None):
                 cell_fw=cell,
                 cell_bw=cell3,
                 inputs=x,
-
                 dtype=tf.float32,
                 time_major=False,
                 scope="rnn_1"
@@ -317,15 +322,20 @@ def test_better_model():
 
     loss=tf.losses.mean_squared_error(y_in[:,:,0:2],pred_pos)
     cro = tf.losses.mean_squared_error(y_in[:,:,2],pred_state)
-    final = 10.0*loss+cro
-    optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
-    minimize = optimizer.minimize(final)
+    final = loss+cro
+    optimizer = tf.train.AdamOptimizer(learning_rate=0.002)
+    #optimizer=tf.train.GradientDescentOptimizer(learning_rate=0.002)
+    gvs = optimizer.compute_gradients(final)
+    capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
+    minimize = optimizer.apply_gradients(capped_gvs)
+    #minimize = optimizer.minimize(final)
 
     tf.summary.scalar("mse", loss)
     sess = tf.Session()
     train_writer = tf.summary.FileWriter(dr+"/",
                                          sess.graph)
     init_op = tf.initialize_all_variables()
+    saver=tf.train.Saver()
     sess.run(init_op)
 
     idx = 0
@@ -344,15 +354,19 @@ def test_better_model():
                 #print("states",cros)
                 #print("positions",lo)
                 print("total",tots)
-                train_writer.add_summary(summary,idx)
+            #     train_writer.add_summary(summary,idx)
+            # if(idx%100==0):
+            #     #sanity check
+            #     cords, states = sess.run([pred_pos, pred_state], {x_in: x, y_in: y})
+            #     print(y[0,:,0:2],cords[0])
 
-
-            if(idx%100==0):
+            if(idx%500==0):
                 print("Saving images...")
                 #diff = sess.run(loss, {x_in: x, y_in: y})
                 cords,states = sess.run([pred_pos,pred_state], {x_in: x, y_in: y})
                 total=np.concatenate([cords,np.reshape(states,[BATCH,leng,1])],-1)
                 tt=total
+                #print(tt[0])
                 # print(y[0])
                 # print(cords[0])
                 # print(states[0])
@@ -366,7 +380,8 @@ def test_better_model():
                 tot=np.expand_dims(tot,0)
                 tf.summary.image(str(i)+"_"+str(idx%500),np.array(tot))
 
-            # if(idx%1000==0):
+            if(idx%1000==0):
+                saver.save(sess,"out/"+dr+"/model.ckpt")
             #     inter=sess.run(latent, {x_in:x})
             #     intepolations=[gen_interpolation(inter[i],inter[i+1]) for i in range(0,4)]
             #     ltn=[]
