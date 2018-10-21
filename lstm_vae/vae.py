@@ -75,13 +75,12 @@ def create_lstm_vae(input_dim,
     generator = Model(decoder_input, _x_decoded_mean)
     
     def vae_loss(x, x_decoded_mean):
-        xent_loss = objectives.mse(x[:,:,0:2], x_decoded_mean[:,:,0:2])
-        cross =objectives.mse(x[:,:,2],x_decoded_mean[:,:,2])
-        cross= K.mean(cross)/batch_size
+        xent_loss = objectives.mse(x,x_decoded_mean)
+
         kl_loss = - 0.5 * K.mean(1 + z_log_sigma - K.square(z_mean) - K.exp(z_log_sigma))
-        loss = xent_loss + kl_loss +cross
+        loss = xent_loss + kl_loss
         return loss
-    opti = Adam(lr=0.001)
+    opti = Adam(lr=0.0005)
     vae.compile(optimizer=opti, loss=vae_loss)
     
     return vae, encoder, generator

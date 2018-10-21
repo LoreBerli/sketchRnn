@@ -6,20 +6,22 @@ from lstm_vae import create_lstm_vae
 import numpy as np
 import sketcher
 
-batch_size=32
-timesteps=80
+batch_size=1024
+timesteps=70
 latent_dim=128
 input_dim=3
 
 
 def get_coord_drawings_z_axis():
     leng=timesteps
-    gg = utils.get_slightly_less_simplified_data("",leng)
+    #gg = utils.get_slightly_less_simplified_data("",leng)
+    gg = utils.get_one_hot_data("", leng)
     while True:
-        x_batched = np.zeros([batch_size, leng, 3])
-        y_batched = np.zeros([batch_size, leng, 3])
+        x_batched = np.zeros([batch_size, leng, 5])
+        y_batched = np.zeros([batch_size, leng, 5])
         for b in range(batch_size):
             x = next(gg)
+
             ll = len(x)
             x_batched[b,:,:]=x
             y_batched[b,:,:]=x
@@ -29,19 +31,19 @@ def get_coord_drawings_z_axis():
 def main():
     x_input=[]
     gen=get_coord_drawings_z_axis()
-    for i in range(0,1024):
+    for i in range(0,512):
         x,y=next(gen)
         x_input.extend(x)
 
     x_input=np.asarray(x_input)
     print(x_input.shape)
     y_input=x_input
-    input_dim = 3 # 13
+    input_dim = 5 # 13
 
     vae, enc, gen = create_lstm_vae(input_dim,
         timesteps=timesteps,
         batch_size=batch_size,
-        intermediate_dim=64,
+        intermediate_dim=100,
         latent_dim=100,
         epsilon_std=1.)
 

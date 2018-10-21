@@ -87,6 +87,21 @@ def draw_both_with_z_axis(pts,gt):
 
     return im_out
 
+def draw_one_hot(pts,gt):
+    im_out = Image.new("RGB", (256, 256), (255, 255, 255))
+    im_dra = ImageDraw.ImageDraw(im_out)
+
+    points = [tuple(couple) for couple in pts]
+    gt_points = [tuple(couple) for couple in gt]
+    for p in range(0, len(points) - 1):
+
+        if (points[p][3] > points[p][2]):
+            im_dra.line((points[p][0:2], points[p + 1][0:2]), fill=(0, 0, 0))
+    for p in range(0, len(gt_points) - 1):
+        if (gt_points[p][3] > gt_points[p][2]):
+            im_dra.line((gt_points[p][0:2], gt_points[p + 1][0:2]), fill=(255, 128, 128))
+
+    return im_out
 
 def save_tested(pts,name,id):
 
@@ -124,7 +139,7 @@ def save_batch_diff_z_axis(batch,gt,name,id):
     total=Image.new("RGB",(256*int(math.sqrt(len(batch))),256*int(math.sqrt(len(batch)))))
     ims=[]
     for j,i in enumerate(batch):
-        img=draw_both_with_z_axis(batch[j],gt[j])
+        img=draw_one_hot(batch[j],gt[j])
         total.paste(img,(j%int(math.sqrt(len(batch)))*256,j//int(math.sqrt(len(batch)))*256))
     total.save(name+"/"+id+".png")
     return total

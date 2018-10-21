@@ -75,6 +75,47 @@ def get_slightly_less_simplified_data(dt,MAX):
 
             yield points[0:MAX,:]
 
+def get_one_hot_data(dt,MAX):
+    """
+    Terribile ma funziona
+    :param dt: json quickDraw dataset
+    :param MAX: MAX # of points
+    :return: normalized data , [x,y,pen_down]
+    """
+    UP=  [1.0, 0.0, 0.0]
+    DOWN=[0.0, 1.0, 0.0]
+    LAST=[0.0, 0.0, 1.0]
+    gen = create_shuffled_mixed_dataset("",50000)
+    for v in gen:
+
+        o=json.loads(v)
+
+        if(o["recognized"]==True):
+            points=[]
+            strokes = o["drawing"]
+            for s in strokes:
+                strok = list(zip(s[0], s[1]))
+                pen_stroks=[]
+                for i,pts in enumerate(strok):
+
+                    norm_pts=[(pts[0]/128.0)-1.0,(pts[1]/128.0)-1.0]
+                    if i<len(strok)-1:
+                        norm_pts.extend(DOWN)
+                    else:
+                        norm_pts.extend(UP)
+                    pen_stroks.append(np.array(norm_pts))
+
+
+                points.extend(np.array(pen_stroks))
+            while(len(points)<MAX):
+                last_p_token=[0,0]
+                last_p_token.extend(LAST)
+                points.append(last_p_token)
+            points=np.asarray(points)
+
+
+            yield points[0:MAX]
+
 def get_info(dt):
     gen = json_gen(dt)
     avg=0
