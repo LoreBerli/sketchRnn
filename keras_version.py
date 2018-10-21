@@ -1,4 +1,4 @@
-from keras.layers import Input, LSTM, RepeatVector
+from keras.layers import Input, LSTM, RepeatVector,Softmax
 from keras.models import Model
 from keras.optimizers import Adam
 import utils
@@ -6,7 +6,7 @@ from lstm_vae import create_lstm_vae
 import numpy as np
 import sketcher
 
-batch_size=1024
+batch_size=16
 timesteps=70
 latent_dim=128
 input_dim=3
@@ -31,7 +31,7 @@ def get_coord_drawings_z_axis():
 def main():
     x_input=[]
     gen=get_coord_drawings_z_axis()
-    for i in range(0,512):
+    for i in range(0,64):
         x,y=next(gen)
         x_input.extend(x)
 
@@ -48,7 +48,7 @@ def main():
         epsilon_std=1.)
 
     for i in range(8):
-        vae.fit(x_input, y_input, epochs=8,batch_size=batch_size)
+        vae.fit(x_input, x_input, epochs=8,batch_size=batch_size)
 
         preds = vae.predict(x_input,batch_size=batch_size)
 

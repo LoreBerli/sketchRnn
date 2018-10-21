@@ -5,7 +5,7 @@ from keras.layers import Input, LSTM, RepeatVector
 from keras.layers.core import Flatten, Dense, Dropout, Lambda
 from keras.optimizers import SGD, RMSprop, Adam
 from keras import objectives
-
+import numpy
 
 def create_lstm_vae(input_dim, 
     timesteps, 
@@ -75,12 +75,17 @@ def create_lstm_vae(input_dim,
     generator = Model(decoder_input, _x_decoded_mean)
     
     def vae_loss(x, x_decoded_mean):
-        xent_loss = objectives.mse(x,x_decoded_mean)
+        xent_loss = objectives.mse(x[:,:,0:2],x_decoded_mean[:,:,0:2])
+
+        s_x = K.exp(x[:,:,2:5])/K.sum(K.exp(x[:,:,2:5]))
+        s_x_decoded_mean = K.exp(x_decoded_mean[:,:,2:5]) / K.sum(K.exp(x_decoded_mean[:,:,2:5]))
+        cross = objectives.binary_crossentropy(s_x,s_x_decoded_mean)
 
         kl_loss = - 0.5 * K.mean(1 + z_log_sigma - K.square(z_mean) - K.exp(z_log_sigma))
-        loss = xent_loss + kl_loss
+        loss = xent_loss + kl_loss +cross
+
         return loss
-    opti = Adam(lr=0.0005)
+    opti = Adam(lr=0.001)
     vae.compile(optimizer=opti, loss=vae_loss)
     
     return vae, encoder, generator
