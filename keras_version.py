@@ -1,13 +1,14 @@
 from keras.layers import Input, LSTM, RepeatVector,Softmax
 from keras.models import Model
 from keras.optimizers import Adam
+from keras import backend as K
 import utils
 from lstm_vae import create_lstm_vae
 import numpy as np
 import sketcher
 
-batch_size=16
-timesteps=70
+batch_size=64
+timesteps=120
 latent_dim=128
 input_dim=3
 
@@ -31,7 +32,7 @@ def get_coord_drawings_z_axis():
 def main():
     x_input=[]
     gen=get_coord_drawings_z_axis()
-    for i in range(0,64):
+    for i in range(0,2048):
         x,y=next(gen)
         x_input.extend(x)
 
@@ -43,12 +44,12 @@ def main():
     vae, enc, gen = create_lstm_vae(input_dim,
         timesteps=timesteps,
         batch_size=batch_size,
-        intermediate_dim=100,
+        intermediate_dim=32,
         latent_dim=100,
         epsilon_std=1.)
 
-    for i in range(8):
-        vae.fit(x_input, x_input, epochs=8,batch_size=batch_size)
+    for i in range(4):
+        vae.fit(x_input, x_input, epochs=4,batch_size=batch_size)
 
         preds = vae.predict(x_input,batch_size=batch_size)
 
@@ -56,6 +57,10 @@ def main():
         print("[plotting...]")
         print("x: %s, preds: %s" % (x_input.shape, preds.shape))
         tt=preds
+        l=np.exp(tt[:,:,2:5])
+        ld=np.sum(np.exp(tt[:,:,2:5]),axis=-1,keepdims=True)
+        l=l/ld
+        print(l[0])
         print(tt[0])
         print(y_input[0])
         tot = sketcher.save_batch_diff_z_axis(list((1 + tt[0:16]) * 128), list((1 + y_input[0:16]) * 128), "./",

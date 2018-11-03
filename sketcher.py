@@ -92,6 +92,7 @@ def draw_one_hot(pts,gt):
     im_dra = ImageDraw.ImageDraw(im_out)
 
     points = [tuple(couple) for couple in pts]
+    print(points[0])
     gt_points = [tuple(couple) for couple in gt]
     for p in range(0, len(points) - 1):
 

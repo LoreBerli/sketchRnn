@@ -37,8 +37,9 @@ def get_simplified_data(dt,MAX):
             yield (np.array(points[0:MAX])/128.0)-1.0
 
 def create_shuffled_mixed_dataset(categories,per_cat):
-    dts=[d for d in os.listdir("dataset")]
-    dts_gens=[json_gen("dataset/"+d) for d in dts]
+    path="small"
+    dts=[d for d in os.listdir(path)]
+    dts_gens=[json_gen(path+"/"+d) for d in dts]
     while(True):
         for i in range(0,per_cat):
             for g in dts_gens:
@@ -85,7 +86,7 @@ def get_one_hot_data(dt,MAX):
     UP=  [1.0, 0.0, 0.0]
     DOWN=[0.0, 1.0, 0.0]
     LAST=[0.0, 0.0, 1.0]
-    gen = create_shuffled_mixed_dataset("",50000)
+    gen = create_shuffled_mixed_dataset("",200000)
     for v in gen:
 
         o=json.loads(v)

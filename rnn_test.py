@@ -54,10 +54,10 @@ def get_coord_drawings():
         yield np.array(x_batched), np.array(y_batched)
 
 def get_coord_drawings_z_axis():
-    gg = utils.get_slightly_less_simplified_data(dataset,leng)
+    gg = utils.get_one_hot_data("",leng)
     while True:
-        x_batched = np.zeros([BATCH,leng,3])
-        y_batched = np.zeros([BATCH,leng,3])
+        x_batched = np.zeros([BATCH,leng,5])
+        y_batched = np.zeros([BATCH,leng,5])
         for b in range(BATCH):
             x = next(gg)
             ll = len(x)
@@ -92,24 +92,24 @@ def better_model(x,z=None):
     dec_size=enc_size
     layers=2
     llz = tf.constant(value=BATCH, dtype=tf.int32, shape=[BATCH])
-    cell_dec = tfn.MultiRNNCell([tfn.GRUCell(dec_size, name="dec") for i in range(0,layers)])
+    cell_dec = tfn.MultiRNNCell([tfn.LSTMCell(dec_size, name="dec") for i in range(0,layers)])
     #state_ll=tf.placeholder(dtype=tf.float32,shape=[BATCH,enc_size])
     with tf.variable_scope("bet_mod",reuse=tf.AUTO_REUSE):
         if(z==None):
             x=tf.tile(x,(1,enc_size,1))
-            cell_fw=tfn.MultiRNNCell([tfn.GRUCell(enc_size,name="fw"+str(i)) for i in range(0,layers)])
+            cell_fw=tfn.MultiRNNCell([tfn.LSTMCell(enc_size,name="fw"+str(i)) for i in range(0,layers)])
 
-            cell_bw=tfn.MultiRNNCell([tfn.GRUCell(enc_size,name="bw"+str(i)) for i in range(0,layers)])
-            #outputs,state = tf.nn.bidirectional_dynamic_rnn(cell_fw,cell_bw,inputs=x,dtype=tf.float32,sequence_length=llz,time_major=False,scope="encoder")
-            outputs,state = tf.nn.dynamic_rnn(cell_fw,inputs=x,dtype=tf.float32,sequence_length=llz,time_major=False,scope="encoder")
-
-            state_fw= state
-            print("STATE",state_fw)
-            tot =state_fw# tf.concat([state_fw,state_bw],axis=1)
-            #middle=tf.layers.flatten(tot)
-            #middle=tf.layers.dense(middle,dec_size,activation=tf.tanh,name="lastOne")
-            middle=tot
-            state_ll = tot
+            cell_bw=tfn.MultiRNNCell([tfn.LSTMCell(enc_size,name="bw"+str(i)) for i in range(0,layers)])
+            outputs,state = tf.nn.bidirectional_dynamic_rnn(cell_fw,cell_bw,inputs=x,dtype=tf.float32,sequence_length=llz,time_major=False,scope="encoder")
+            #outputs,state = tf.nn.dynamic_rnn(cell_fw,inputs=x,dtype=tf.float32,sequence_length=llz,time_major=False,scope="encoder")
+            print(state[0][0])
+            print(state[1][0])
+            latent=tf.concat([state[0][0].c,state[1][0].c,state[0][0].h,state[1][0].h],axis=-1)
+            mu=tf.layers.dense(latent,64)
+            sigma=tf.layers.dense(latent,64)
+            middle = mu
+            stat=(tfn.LSTMStateTuple(mu,sigma),tfn.LSTMStateTuple(mu,sigma))
+            state_ll =stat
         else:
             middle=z
             state_ll=tfn.MultiRNNCell.zero_state(cell_dec,BATCH,dtype=tf.float32)
@@ -133,7 +133,7 @@ def better_model(x,z=None):
         ###
         acti=None
         flat_outs=tf.layers.flatten(dec_outs[:,:,0:2])
-        states=tf.layers.flatten(dec_outs[:,:,2])
+        states=tf.layers.flatten(dec_outs[:,:,2:5])
         
         print(flat_outs)
         last = flat_outs#tf.layers.dense(flat_outs,leng*2,activation=tf.tanh)
@@ -142,7 +142,7 @@ def better_model(x,z=None):
         #last_state=tf.expand_dims(last_state,-1)
 
         last=tf.reshape(last,[BATCH,leng,2])
-        #last_state=tf.reshape(last_state,[BATCH,leng,1])
+        last_state=tf.reshape(last_state,[BATCH,leng,3])
         print("LAST",last)
         print("LAST_STATE",last_state)
         #total=tf.concat([last,last_state],axis=-1)
@@ -246,7 +246,7 @@ def test_dense():
     pred,latent = simple_model(x_in)
     _,z=simple_model(x_in,z_in)
     loss=tf.losses.mean_squared_error(y_in,pred)
-    optimizer = tf.train.AdamOptimizer(learning_rate=0.0015)
+    optimizer = tf.train.RMSPropOptimizer(learning_rate=0.0005)
     gvs = optimizer.compute_gradients(loss)
     capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
     minimize = optimizer.apply_gradients(capped_gvs)
@@ -311,24 +311,24 @@ def test_better_model():
     os.mkdir("out/"+dr)
     os.mkdir("out/"+dr+"/imgs")
     os.mkdir("out/"+dr+"/gene")
-    x_in = tf.placeholder(tf.float32, shape=[BATCH, leng, 3])
+    x_in = tf.placeholder(tf.float32, shape=[BATCH, leng, 5])
     print(x_in)
-    y_in = tf.placeholder(tf.float32, shape=[BATCH, leng , 3])
+    y_in = tf.placeholder(tf.float32, shape=[BATCH, leng , 5])
     print(y_in)
-    z_in=tf.placeholder(tf.float32,shape=[BATCH,leng*3])
+    z_in=tf.placeholder(tf.float32,shape=[BATCH,leng*5])
     pred_pos,pred_state,latent = better_model(x_in)
     
     _,_,z=better_model(x_in,z_in)
 
     loss=tf.losses.mean_squared_error(y_in[:,:,0:2],pred_pos)
-    cro = tf.losses.mean_squared_error(y_in[:,:,2],pred_state)
+    cro = tf.losses.mean_squared_error(y_in[:,:,2:5],pred_state)
     final = loss+cro
     optimizer = tf.train.AdamOptimizer(learning_rate=0.002)
     #optimizer=tf.train.GradientDescentOptimizer(learning_rate=0.002)
-    gvs = optimizer.compute_gradients(final)
-    capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
-    minimize = optimizer.apply_gradients(capped_gvs)
-    #minimize = optimizer.minimize(final)
+    #gvs = optimizer.compute_gradients(final)
+    #capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
+    #minimize = optimizer.apply_gradients(capped_gvs)
+    minimize = optimizer.minimize(final)
 
     tf.summary.scalar("mse", loss)
     sess = tf.Session()
@@ -364,7 +364,7 @@ def test_better_model():
                 print("Saving images...")
                 #diff = sess.run(loss, {x_in: x, y_in: y})
                 cords,states = sess.run([pred_pos,pred_state], {x_in: x, y_in: y})
-                total=np.concatenate([cords,np.reshape(states,[BATCH,leng,1])],-1)
+                total=np.concatenate([cords,np.reshape(states,[BATCH,leng,3])],-1)
                 tt=total
                 #print(tt[0])
                 # print(y[0])

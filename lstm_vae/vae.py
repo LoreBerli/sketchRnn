@@ -7,22 +7,22 @@ from keras.optimizers import SGD, RMSprop, Adam
 from keras import objectives
 import numpy
 
-def create_lstm_vae(input_dim, 
-    timesteps, 
-    batch_size, 
-    intermediate_dim, 
+def create_lstm_vae(input_dim,
+    timesteps,
+    batch_size,
+    intermediate_dim,
     latent_dim,
     epsilon_std=1.):
 
     """
-    Creates an LSTM Variational Autoencoder (VAE). Returns VAE, Encoder, Generator. 
+    Creates an LSTM Variational Autoencoder (VAE). Returns VAE, Encoder, Generator.
 
     # Arguments
         input_dim: int.
         timesteps: int, input timestep dimension.
         batch_size: int.
-        intermediate_dim: int, output shape of LSTM. 
-        latent_dim: int, latent z-layer shape. 
+        intermediate_dim: int, output shape of LSTM.
+        latent_dim: int, latent z-layer shape.
         epsilon_std: float, z-layer sigma.
 
 
@@ -38,7 +38,7 @@ def create_lstm_vae(input_dim,
     # VAE Z layer
     z_mean = Dense(latent_dim)(h)
     z_log_sigma = Dense(latent_dim)(h)
-    
+
     def sampling(args):
         z_mean, z_log_sigma = args
         epsilon = K.random_normal(shape=(batch_size, latent_dim),
@@ -48,7 +48,7 @@ def create_lstm_vae(input_dim,
     # note that "output_shape" isn't necessary with the TensorFlow backend
     # so you could write `Lambda(sampling)([z_mean, z_log_sigma])`
     z = Lambda(sampling, output_shape=(latent_dim,))([z_mean, z_log_sigma])
-    
+
     # decoded LSTM layer
     decoder_h = LSTM(intermediate_dim, return_sequences=True)
     decoder_mean = LSTM(input_dim, return_sequences=True)
@@ -58,7 +58,7 @@ def create_lstm_vae(input_dim,
 
     # decoded layer
     x_decoded_mean = decoder_mean(h_decoded)
-    
+
     # end-to-end autoencoder
     vae = Model(x, x_decoded_mean)
 
@@ -73,20 +73,21 @@ def create_lstm_vae(input_dim,
 
     _x_decoded_mean = decoder_mean(_h_decoded)
     generator = Model(decoder_input, _x_decoded_mean)
-    
+
     def vae_loss(x, x_decoded_mean):
         xent_loss = objectives.mse(x[:,:,0:2],x_decoded_mean[:,:,0:2])
+        bol_x=x[:,:,2:5]
+        bol_decoded_x=x_decoded_mean[:,:,2:5]
 
-        s_x = K.exp(x[:,:,2:5])/K.sum(K.exp(x[:,:,2:5]))
-        s_x_decoded_mean = K.exp(x_decoded_mean[:,:,2:5]) / K.sum(K.exp(x_decoded_mean[:,:,2:5]))
+        s_x = K.exp(bol_x)/K.sum(K.exp(bol_x),axis=-1,keepdims=True)
+        s_x_decoded_mean = K.exp(bol_decoded_x) / K.sum(K.exp(bol_decoded_x),axis=-1,keepdims=True)
         cross = objectives.binary_crossentropy(s_x,s_x_decoded_mean)
 
         kl_loss = - 0.5 * K.mean(1 + z_log_sigma - K.square(z_mean) - K.exp(z_log_sigma))
         loss = xent_loss + kl_loss +cross
 
         return loss
-    opti = Adam(lr=0.001)
+    opti = RMSprop()
     vae.compile(optimizer=opti, loss=vae_loss)
-    
-    return vae, encoder, generator
 
+    return vae, encoder, generator

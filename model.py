@@ -1,5 +1,9 @@
-import tensorflow
+import tensorflow as tf
 import numpy as np
+import tensorflow.contrib.rnn as tfn
+
+BATCH=64
+leng=70
 
 def model(x,z=None):
     enc_size=128
@@ -14,14 +18,11 @@ def model(x,z=None):
             cell_bw=tfn.MultiRNNCell([tfn.LSTMCell(enc_size,name="bw"+str(i)) for i in range(0,3)])
             outputs,state = tf.nn.bidirectional_dynamic_rnn(cell_fw,cell_bw,inputs=x,dtype=tf.float32,sequence_length=llz,time_major=False,scope="encoder")
             #outputs,state = tf.nn.dynamic_rnn(cell_fw,inputs=x,dtype=tf.float32,sequence_length=llz,time_major=False,scope="encoder")
-
+            latent=tf.concat([state[0].c,state[1].c],axis=-1)
             state_fw= state
             print("STATE",state_fw)
-            tot =state_fw# tf.concat([state_fw,state_bw],axis=1)
-            #middle=tf.layers.flatten(tot)
-            #middle=tf.layers.dense(middle,dec_size,activation=tf.tanh,name="lastOne")
-            middle=tot
-            state_ll = tot
+            sigma=tf.layers.dense(latent,64)
+            mu=tf.layers.dense(latent,64)
         else:
             middle=z
             state_ll=tfn.MultiRNNCell.zero_state(cell_dec,BATCH,dtype=tf.float32)
