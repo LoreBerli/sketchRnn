@@ -2,6 +2,7 @@ import os
 import json
 import numpy as np
 import math
+import random
 
 def json_gen(path):
     with open(path) as f:
@@ -39,7 +40,9 @@ def get_simplified_data(dt,MAX):
 def create_shuffled_mixed_dataset(categories,per_cat):
     path="small"
     dts=[d for d in os.listdir(path)]
+    random.shuffle(dts)
     dts_gens=[json_gen(path+"/"+d) for d in dts]
+    random.shuffle(dts_gens)
     while(True):
         for i in range(0,per_cat):
             for g in dts_gens:
@@ -150,6 +153,18 @@ def get_info(dt):
     std=math.sqrt(avgSqr-(avg*avg))
     print(avg,std)
 
+def get_coord_drawings_z_axis(BATCH,leng):
+    gg = get_one_hot_data("",leng)
+    while True:
+        x_batched = np.zeros([BATCH,leng,5])
+        y_batched = np.zeros([BATCH,leng,5])
+        for b in range(BATCH):
+            x = next(gg)
+            ll = len(x)
+            x_batched[b,:,:]=x
+            y_batched[b,:,:]=x
+
+        yield x_batched,y_batched
 
 #print("Hi")
 

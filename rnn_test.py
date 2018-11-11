@@ -112,14 +112,20 @@ def better_model(x,z=None):
             state_ll =stat
         else:
             middle=z
+            mu=tf.layers.dense(z,64)
+            sigma=tf.layers.dense(z,64)
             state_ll=tfn.MultiRNNCell.zero_state(cell_dec,BATCH,dtype=tf.float32)
+
+        #TODO : l'encoder deve restituire anche media e varianza
+
+
         #middle=tf.transpose(middle,[1,2,0])
         ####
         #state_ll=state_fw
         print("middle",middle)
         print("STATE_FW",state_ll)
         #res=tf.expand_dims(middle,axis=-1)
-        res=tf.zeros([BATCH,leng,3])
+        res=tf.zeros([BATCH,leng,5])
         print("Second INPUT",res)
 
         dec_outs,dec_state= tf.nn.dynamic_rnn(
@@ -149,7 +155,7 @@ def better_model(x,z=None):
         #total=tf.reshape(total,[BATCH,leng,3])
         #last=tf.reshape(last,[BATCH,leng,3])
 
-        return last,last_state,middle
+        return last,last_state,middle,mu,sigma
 
 
 
@@ -242,9 +248,12 @@ def test_dense():
     print(x_in)
     y_in = tf.placeholder(tf.float32, shape=[BATCH, leng , 2])
     print(y_in)
-    z_in=tf.placeholder(tf.float32,shape=[BATCH,leng*2])
+    z_in=tf.placeholder(tf.float32,shape=[BATCH,leng*5])
     pred,latent = simple_model(x_in)
     _,z=simple_model(x_in,z_in)
+    ################################
+
+    ################################
     loss=tf.losses.mean_squared_error(y_in,pred)
     optimizer = tf.train.RMSPropOptimizer(learning_rate=0.0005)
     gvs = optimizer.compute_gradients(loss)
@@ -315,15 +324,22 @@ def test_better_model():
     print(x_in)
     y_in = tf.placeholder(tf.float32, shape=[BATCH, leng , 5])
     print(y_in)
-    z_in=tf.placeholder(tf.float32,shape=[BATCH,leng*5])
-    pred_pos,pred_state,latent = better_model(x_in)
+    z_in=tf.placeholder(tf.float32,shape=[BATCH,256])
+    pred_pos,pred_state,latent,mu,sigma = better_model(x_in)
     
-    _,_,z=better_model(x_in,z_in)
+    _,_,z,_,_=better_model(x_in,z_in)
+    ######################################################
+    latent_losses = 0.5 * tf.reduce_sum(tf.square(mu) +
+                                        tf.square(sigma) -
+                                        tf.log(tf.square(sigma)) - 1,
+                                        axis=1)
 
+
+    #################################################
     loss=tf.losses.mean_squared_error(y_in[:,:,0:2],pred_pos)
     cro = tf.losses.mean_squared_error(y_in[:,:,2:5],pred_state)
-    final = loss+cro
-    optimizer = tf.train.AdamOptimizer(learning_rate=0.002)
+    final = tf.reduce_mean(latent_losses)+(loss+cro)
+    optimizer = tf.train.AdamOptimizer(learning_rate=0.005)
     #optimizer=tf.train.GradientDescentOptimizer(learning_rate=0.002)
     #gvs = optimizer.compute_gradients(final)
     #capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]

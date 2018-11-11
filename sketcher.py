@@ -92,7 +92,6 @@ def draw_one_hot(pts,gt):
     im_dra = ImageDraw.ImageDraw(im_out)
 
     points = [tuple(couple) for couple in pts]
-    print(points[0])
     gt_points = [tuple(couple) for couple in gt]
     for p in range(0, len(points) - 1):
 
@@ -139,7 +138,9 @@ def save_batch_diff(batch,gt,name,id):
 def save_batch_diff_z_axis(batch,gt,name,id):
     total=Image.new("RGB",(256*int(math.sqrt(len(batch))),256*int(math.sqrt(len(batch)))))
     ims=[]
+    print(batch[0])
     for j,i in enumerate(batch):
+
         img=draw_one_hot(batch[j],gt[j])
         total.paste(img,(j%int(math.sqrt(len(batch)))*256,j//int(math.sqrt(len(batch)))*256))
     total.save(name+"/"+id+".png")
