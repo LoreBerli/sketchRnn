@@ -3,6 +3,7 @@ import json
 import numpy as np
 import math
 import random
+import time
 
 def json_gen(path):
     with open(path) as f:
@@ -38,7 +39,7 @@ def get_simplified_data(dt,MAX):
             yield (np.array(points[0:MAX])/128.0)-1.0
 
 def create_shuffled_mixed_dataset(categories,per_cat):
-    path="small"
+    path="dataset"
     dts=[d for d in os.listdir(path)]
     random.shuffle(dts)
     dts_gens=[json_gen(path+"/"+d) for d in dts]
@@ -89,7 +90,9 @@ def get_one_hot_data(dt,MAX):
     UP=  [1.0, 0.0, 0.0]
     DOWN=[0.0, 1.0, 0.0]
     LAST=[0.0, 0.0, 1.0]
-    gen = create_shuffled_mixed_dataset("",200000)
+
+    gen = create_shuffled_mixed_dataset("",2000)
+
     for v in gen:
 
         o=json.loads(v)
@@ -119,6 +122,7 @@ def get_one_hot_data(dt,MAX):
 
 
             yield points[0:MAX]
+
 
 def get_info(dt):
     gen = json_gen(dt)
@@ -154,17 +158,19 @@ def get_info(dt):
     print(avg,std)
 
 def get_coord_drawings_z_axis(BATCH,leng):
+    s=time.time()
     gg = get_one_hot_data("",leng)
+    print("one_:hot",time.time()-s)
     while True:
         x_batched = np.zeros([BATCH,leng,5])
-        y_batched = np.zeros([BATCH,leng,5])
+
         for b in range(BATCH):
             x = next(gg)
             ll = len(x)
             x_batched[b,:,:]=x
-            y_batched[b,:,:]=x
 
-        yield x_batched,y_batched
+
+        yield x_batched,x_batched
 
 #print("Hi")
 

@@ -11,12 +11,12 @@ import time
 
 EPOCHS=16
 trunc_back=10
-BATCH=128
-leng=70
-latent=100
+BATCH=512
+leng=120
+latent=128
 
 dataset="dataset/shuffled_bikecar"
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 #TODO leng variabile
 #TODO TOKEN fine sequenza <EOS> ===> -1 ?
