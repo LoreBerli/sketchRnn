@@ -2,6 +2,8 @@ from PIL import Image
 from PIL import ImageDraw
 import json
 import math
+import copy
+import numpy as np
 import time
 
 import os
@@ -87,19 +89,37 @@ def draw_both_with_z_axis(pts,gt):
 
     return im_out
 
-def draw_one_hot(pts,gt):
-    im_out = Image.new("RGB", (256, 256), (255, 255, 255))
+def draw_one_hot(pts,got,scale):
+    gt=copy.copy(got)
+    im_out = Image.new("RGB", (scale,scale), (255, 255, 255))
     im_dra = ImageDraw.ImageDraw(im_out)
+    pts[:,0:2]=((1.0+pts[:,0:2])*128)
+    gt[:,0:2]=((1.0+gt[:,0:2])*128)
 
     points = [tuple(couple) for couple in pts]
     gt_points = [tuple(couple) for couple in gt]
+    direct = 0
+
     for p in range(0, len(points) - 1):
 
+        #im_dra.ellipse([points[p][0:2]+prev[0],(points[p][0:2][0]+1,points[p][0:2][1]+1)],fill=(30, 120, 30))
         if (points[p][3] > points[p][2]):
-            im_dra.line((points[p][0:2], points[p + 1][0:2]), fill=(0, 0, 0))
+            im_dra.line((points[p][0:2], points[p + 1][0:2]), fill=(0, 0,max(0,(130+direct))))
+            direct+=10
+
+    direct = 0
+
+
     for p in range(0, len(gt_points) - 1):
+        #im_dra.point(gt_points[p][0:2], fill=(70, 70, 70))
+        #im_dra.ellipse([gt_points[p][0:2],(gt_points[p][0:2][0]+1,gt_points[p][0:2][1]+1)],fill=(70, 70, 70))
         if (gt_points[p][3] > gt_points[p][2]):
-            im_dra.line((gt_points[p][0:2], gt_points[p + 1][0:2]), fill=(255, 128, 128))
+
+            im_dra.line((gt_points[p][0:2], gt_points[p + 1][0:2]), fill=(min(130+direct,255), 120, 120))
+            direct+=10
+            #im_dra.point(gt_points[p][0:2], fill=(50, 120, 50))
+
+
 
     return im_out
 
@@ -136,13 +156,14 @@ def save_batch_diff(batch,gt,name,id):
     return total
 
 def save_batch_diff_z_axis(batch,gt,name,id):
-    total=Image.new("RGB",(256*int(math.sqrt(len(batch))),256*int(math.sqrt(len(batch)))))
+    scale=256#broken
+    total=Image.new("RGB",(scale*int(math.sqrt(len(batch))),scale*int(math.sqrt(len(batch)))))
     ims=[]
-    print(batch[0])
+    #print(batch[0])
     for j,i in enumerate(batch):
 
-        img=draw_one_hot(batch[j],gt[j])
-        total.paste(img,(j%int(math.sqrt(len(batch)))*256,j//int(math.sqrt(len(batch)))*256))
+        img=draw_one_hot(batch[j],gt[j],scale)
+        total.paste(img,(j%int(math.sqrt(len(batch)))*scale,j//int(math.sqrt(len(batch)))*scale))
     total.save(name+"/"+id+".png")
     return total
 

@@ -1,19 +1,12 @@
 import tensorflow as tf
 import numpy as np
-import tensorflow.contrib.rnn as tfn
-import tensorflow.contrib as tfc
-import tensorflow.contrib.seq2seq as s2s
 import utils
 import sketcher
 import models
 import os
 import time
 
-EPOCHS=16
-trunc_back=10
-BATCH=512
-leng=120
-latent=128
+
 
 dataset="dataset/shuffled_bikecar"
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
@@ -23,28 +16,32 @@ os.environ["CUDA_VISIBLE_DEVICES"]="0"
 #TODO MASK LOSS per punti dopo <EOS>
 
 
-def get_coord_drawings_z_axis():
-    gg = utils.get_one_hot_data("",leng)
-    while True:
-        x_batched = np.zeros([BATCH,leng,5])
-        y_batched = np.zeros([BATCH,leng,5])
-        for b in range(BATCH):
-            x = next(gg)
-            ll = len(x)
-            x_batched[b,:,:]=x
-            y_batched[b,:,:]=x
 
-        yield x_batched,y_batched
 
 def train_mlp():
+    load=True
+    BATCH = 100
+    rates= [0.0002]
+    encs=[16,32,64,128]
 
+    accel=[1.2]
+    latents = [32,64,128,256]
+    activ=[None]
+    e_l={256:[128]}
+    EPOCHS=32
+    for e in e_l:
+        for l in e_l[e]:
+            for a in activ:
+                for ccel in accel:
+                    tf.reset_default_graph()
+                    sess = tf.Session()
 
-    #mod = models.mlp_ae(latent, BATCH)
-    mod=models.vae(latent,BATCH)
-    sess = tf.Session()
-    init_op = tf.initialize_all_variables()
-    sess.run(init_op)
-    mod.train(sess)
+                    mod = models.vae(l, BATCH, e, 0.001, EPOCHS,ccel,a)
+                    init_op = tf.global_variables_initializer()
+
+                    sess.run(init_op)
+                    mod.train(sess)
+
 
 train_mlp()
 
